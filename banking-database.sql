@@ -206,3 +206,19 @@ INSERT INTO Loan_payment (loan_id, amount_paid) VALUES
 
 
 
+SELECT * from Customer;
+
+SELECT * from Account;
+
+UPDATE  Customer SET  email = 'rahul12@gmail.com' , cust_name = 'Rahul kumar' WHERE customer_Id = 1;
+
+SELECT * from Customer where customer_Id = 3;
+
+SELECT COUNT(*) AS totalCustomer from Customer;
+
+SELECT * from Customer INNER JOIN Account ON Customer.customer_Id = Account.customer_id WHERE Account.account_no = 1010001;
+
+UPDATE Customer set status = 'Closed' WHERE customer_Id = 3; -- delete the user data but we not want to delete every thing regarding transaction that way used status column and update it .
+
+
+
