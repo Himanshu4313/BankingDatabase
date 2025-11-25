@@ -221,4 +221,207 @@ SELECT * from Customer INNER JOIN Account ON Customer.customer_Id = Account.cust
 UPDATE Customer set status = 'Closed' WHERE customer_Id = 3; -- delete the user data but we not want to delete every thing regarding transaction that way used status column and update it .
 
 
+/* ============================================================
+   BANKING SYSTEM QUERIES  
+   Based on Tables: Customer, Account, Transactions, FundTransfer,
+   Loan, Loan_payment
+   ============================================================ */
+
+
+/* ============================================================
+   1. OPEN A NEW CUSTOMER ACCOUNT  
+   ============================================================ */
+
+-- Step 1: Add Customer
+INSERT INTO Customer (cust_name, email, phone, Dob, addhar_no, Pan_no, cust_address)
+VALUES ('Saurav Jaiswal', 'saurav@gmail.com', '9999001122', '1997-05-15',
+        889977665544, 'SAURV5678T', 'Delhi');
+
+-- Step 2: Create an account for the new customer
+INSERT INTO Account (account_no, customer_id, account_type, balance)
+VALUES (1010013, SCOPE_IDENTITY(), 'saving', 5000);
+
+
+
+/* ============================================================
+   2. CHECK ACCOUNT BALANCE 
+   ============================================================ */
+
+SELECT account_no, balance
+FROM Account
+WHERE account_no = 1010005;
+
+
+
+/* ============================================================
+   3. DEPOSIT MONEY  
+   ============================================================ */
+
+BEGIN TRANSACTION;
+
+-- Add credit transaction record
+INSERT INTO Transactions (txn_id, account_number, txn_type, amount, description_)
+VALUES ('TXN100', 1010005, 'credit', 8000, 'Cash deposit');
+
+-- Update account balance
+UPDATE Account 
+SET balance = balance + 8000
+WHERE account_no = 1010005;
+
+COMMIT;
+
+
+
+/* ============================================================
+   4. WITHDRAW MONEY  
+   ============================================================ */
+
+BEGIN TRANSACTION;
+
+-- Add debit transaction
+INSERT INTO Transactions (txn_id, account_number, txn_type, amount, description_)
+VALUES ('TXN101', 1010002, 'debit', 5000, 'ATM withdrawal');
+
+-- Deduct balance
+UPDATE Account
+SET balance = balance - 5000
+WHERE account_no = 1010002;
+
+COMMIT;
+
+
+
+/* ============================================================
+   5. FUND TRANSFER 
+   ============================================================ */
+
+BEGIN TRANSACTION;
+
+-- Save transfer record
+INSERT INTO FundTransfer (from_account, to_account, amount)
+VALUES (1010001, 1010008, 3000);
+
+-- Deduct from sender
+UPDATE Account
+SET balance = balance - 3000
+WHERE account_no = 1010001;
+
+-- Add to receiver
+UPDATE Account
+SET balance = balance + 3000
+WHERE account_no = 1010008;
+
+-- Log debit transaction
+INSERT INTO Transactions (txn_id, account_number, txn_type, amount, description_)
+VALUES ('TXN102', 1010001, 'debit', 3000, 'Fund transfer to 1010008');
+
+-- Log credit transaction
+INSERT INTO Transactions (txn_id, account_number, txn_type, amount, description_)
+VALUES ('TXN103', 1010008, 'credit', 3000, 'Fund transfer from 1010001');
+
+COMMIT;
+
+
+
+/* ============================================================
+   6. GENERATE ACCOUNT STATEMENT  
+   ============================================================ */
+
+SELECT T.txn_date, T.txn_type, T.amount, T.description_
+FROM Transactions T
+WHERE T.account_number = 1010001
+ORDER BY T.txn_date DESC;
+
+
+
+/* ============================================================
+   7. MINI STATEMENT (Last 5 Transactions)
+   ============================================================ */
+
+SELECT TOP 5 *
+FROM Transactions
+WHERE account_number = 1010001
+ORDER BY txn_date DESC;
+
+
+
+/* ============================================================
+   8. VIEW CUSTOMER PROFILE + ACCOUNTS 
+   ============================================================ */
+
+SELECT C.cust_name, C.email, C.phone, C.Pan_no, C.addhar_no,
+       A.account_no, A.account_type, A.balance
+FROM Customer C
+JOIN Account A ON C.customer_Id = A.customer_id
+WHERE C.customer_Id = 5;
+
+
+
+/* ============================================================
+   9. APPLY FOR A LOAN 
+   ============================================================ */
+
+INSERT INTO Loan (customer_id, loan_type, principal_amount, interest_rate)
+VALUES (5, 'Home Loan', 900000, 7.2);
+
+
+
+/* ============================================================
+   10. PAY LOAN EMI  
+   ============================================================ */
+
+BEGIN TRANSACTION;
+
+INSERT INTO Loan_payment (loan_id, amount_paid)
+VALUES (3, 15000);
+
+COMMIT;
+
+
+
+/* ============================================================
+   11. CHECK LOAN STATUS (Paid vs Remaining Amount)
+   ============================================================ */
+
+SELECT 
+    L.loan_id,
+    L.principal_amount,
+    SUM(P.amount_paid) AS total_paid,
+    (L.principal_amount - SUM(P.amount_paid)) AS remaining_amount
+FROM Loan L
+LEFT JOIN Loan_payment P ON L.loan_id = P.loan_id
+WHERE L.loan_id = 3
+GROUP BY L.loan_id, L.principal_amount;
+
+
+
+/* ============================================================
+   12. CUSTOMER LOAN LEDGER  
+   ============================================================ */
+
+SELECT C.cust_name, L.loan_type, L.principal_amount, 
+       P.amount_paid, P.payment_date
+FROM Customer C
+JOIN Loan L ON C.customer_Id = L.customer_id
+LEFT JOIN Loan_payment P ON L.loan_id = P.loan_id
+WHERE C.customer_Id = 3;
+
+
+
+/* ============================================================
+   13. BANK TOTAL DEPOSITS  
+   ============================================================ */
+
+SELECT SUM(balance) AS total_bank_deposits
+FROM Account;
+
+
+
+/* ============================================================
+   14. TOTAL LOANS ISSUED  
+   ============================================================ */
+
+SELECT SUM(principal_amount) AS total_loans_issued
+FROM Loan;
+
 
